@@ -1,46 +1,36 @@
-import { Image, Switch, StyleSheet, Text, View, TouchableOpacity } from 'react-native'
+import { Image, Switch, StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { Header } from '@rneui/base'
-import { useNavigation } from '@react-navigation/native';
-import { auth } from '../firebase';
+import Headerr from '../components/Headerr';
+import Condition from '../components/Condition';
+import Forecast from '../components/Forecast';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function Mapicon() {
-    return (
-        <Image style={{ width: 27, height: 27 }} source={require('../assets/map.png')} />
-    );
-}
+const API_KEY = 'cae2e98bbf36527d96a1d9b6de9da84d';
 
-function Unionicon() {
-    const navigation = useNavigation();
-
-    const handleSignOut = () => {
-        auth
-            .signOut()
-            .then(() => {
-                console.warn('User signed out!');
-                navigation.replace('Login');
-            })
-            .catch(error => alert(error.message))
-    }
-
-    return (
-
-        <TouchableOpacity onPress={handleSignOut}>
-            <Image style={{ width: 32, height: 32 }} source={require('../assets/logout.png')} />
-        </TouchableOpacity>
-
-    );
-}
+const city = 'Bandung';
 
 export default function BrightScreen() {
-
-    const navigation = useNavigation();
-
     const [date, setDate] = useState('')
     const [time, setTime] = useState('')
+    const [data, setData] = useState({});
+    const [forecast, setForecast] = useState({});
+    useEffect(() => {
+        (async () => {
+            fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`).then(res => res.json()).then(data => {
+                setData(data);
+            });
+        })();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric`).then(res => res.json()).then(data => {
+                setForecast(data.list);
+            });
+        })();
+    }, []);
 
     useEffect(() => {
         setInterval(() => {
@@ -60,79 +50,13 @@ export default function BrightScreen() {
         }, 1000);
     }, [])
 
-    const [isEnabled, setIsEnabled] = useState(false);
-    const toggleSwitch = () => {
-        setIsEnabled(false)
-        navigation.navigate('Dark')
-    };
-
     return (
         <>
             <View style={styles.container}>
-                <Header
-                    placement="left"
-                    backgroundColor='#29B2DD'
-                    leftComponent={<Mapicon />}
-                    centerComponent={{ text: 'Bandung', style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
-                    rightComponent={<Unionicon />}
-                    containerStyle={{ marginHorizontal: 20 }}
-                />
+                <Headerr city={city} />
                 <Image style={styles.logo} source={require('../assets/Sun.png')} />
-                <Text style={styles.suhu}>30°C</Text>
-                <View style={{ flexDirection: 'row', width: 300, 'alignItems': 'center', justifyContent: 'space-between' }}>
-                    <Text style={styles.text}>Status :</Text>
-                    <Switch
-                        style={styles.switch}
-                        trackColor={{ false: "#767577", true: "#81b0ff" }}
-                        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-                        ios_backgroundColor="#3e3e3e"
-                        onValueChange={toggleSwitch}
-                        value={isEnabled}
-                    />
-                </View>
-                <View style={styles.details}>
-                    <View style={{ flexDirection: 'row' }}>
-                        <Image source={require('../assets/Contour.png')} />
-                        <Text style={styles.textdetail}>57%</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row' }}>
-                        <Image source={require('../assets/humidity.png')} />
-                        <Text style={styles.textdetail}>40%</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row' }}>
-                        <Image source={require('../assets/wind.png')} />
-                        <Text style={styles.textdetail}>15 km/h</Text>
-                    </View>
-                </View>
-                <View style={{ marginTop: 20, backgroundColor: 'rgba(0, 13, 38, 0.3)', borderRadius: 20, padding: 10, width: 300, }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 }}>
-                        <Text style={styles.textdetail}>{date}</Text>
-                        <Text style={styles.textdetail}>{time}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={styles.textdetail}>29°C</Text>
-                            <Image source={require('../assets/cloud.png')} />
-                            <Text style={styles.textdetail}>15.00</Text>
-                        </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={styles.textdetail}>29°C</Text>
-                            <Image source={require('../assets/cloud.png')} />
-                            <Text style={styles.textdetail}>15.00</Text>
-                        </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={styles.textdetail}>29°C</Text>
-                            <Image source={require('../assets/cloud.png')} />
-                            <Text style={styles.textdetail}>15.00</Text>
-                        </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={styles.textdetail}>29°C</Text>
-                            <Image source={require('../assets/cloud.png')} />
-                            <Text style={styles.textdetail}>15.00</Text>
-                        </View>
-                    </View>
-                </View>
-
+                <Condition temp={data.main} hum={data.main} wind={data.wind} />
+                <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
             </View>
         </>
     )
@@ -167,7 +91,7 @@ const styles = StyleSheet.create({
     },
     details: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around',
         width: 300,
         marginTop: 20,
         backgroundColor: 'rgba(0, 13, 38, 0.3)',

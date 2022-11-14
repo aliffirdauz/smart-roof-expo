@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import BrightScreen from './src/screens/BrightScreen';
@@ -12,7 +12,7 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown : false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
         {/* <Stack.Screen name="Registration" component={RegistrationScreen} /> */}
         <Stack.Screen name="Bright" component={BrightScreen} />
