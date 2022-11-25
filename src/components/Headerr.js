@@ -38,7 +38,7 @@ const Headerr = ({city}) => {
             placement="left"
             backgroundColor='#29B2DD'
             leftComponent={<Mapicon />}
-            centerComponent={{ text: 'Bandung', style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
+            centerComponent={{ text: {city}, style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
             rightComponent={<Unionicon />}
             containerStyle={{ marginHorizontal: 20 }}
         />
