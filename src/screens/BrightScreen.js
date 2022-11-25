@@ -16,6 +16,8 @@ export default function BrightScreen() {
     const [time, setTime] = useState('')
     const [data, setData] = useState({});
     const [forecast, setForecast] = useState({});
+    const [isEnabled, setIsEnabled] = useState();
+
     useEffect(() => {
         (async () => {
             fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`).then(res => res.json()).then(data => {
@@ -54,7 +56,11 @@ export default function BrightScreen() {
         <>
             <View style={styles.container}>
                 <Headerr city={city} />
-                <Image style={styles.logo} source={require('../assets/Sun.png')} />
+                {isEnabled ?
+                    <Image style={styles.logo} source={require('../assets/Sun.png')} />
+                    :
+                    <Image style={styles.logo} source={require('../assets/Rain.png')} />
+                }
                 <Condition temp={data.main} hum={data.main} wind={data.wind} />
                 <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
             </View>

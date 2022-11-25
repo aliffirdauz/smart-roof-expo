@@ -1,34 +1,73 @@
 import { Image, Switch, StyleSheet, Text, View } from 'react-native'
-import React, {useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
+import firebase from 'firebase/compat';
 
-const Condition = ({temp, hum, wind}) => {
+const Condition = ({ temp, hum, wind }) => {
     const navigation = useNavigation();
 
+    const [suhu, setSuhu] = useState(0);
+    const [lembab, setLembab] = useState(0);
+
     const [isEnabled, setIsEnabled] = useState(false);
-    const toggleSwitch = () => {
+    const toggleDark = () => {
         setIsEnabled(false)
-        navigation.navigate('Dark')
+        // navigation.navigate('Dark')
     };
+
+    const toggleBright = () => {
+        setIsEnabled(true)
+        // navigation.navigate('Bright')
+    };
+
+    useEffect(() => {
+        (async () => {
+            firebase.database().ref('sensor/dht/').on('value', function (snapshot) {
+                console.log(snapshot.val())
+                setSuhu(snapshot.val())
+            });
+            firebase.database().ref('sensor/hum/').on('value', function (snapshot) {
+                console.log(snapshot.val())
+                setLembab(snapshot.val())
+            });
+        })();
+    }, []);
 
     return (
         <>
-            <Text style={styles.suhu}>{temp ? Math.round(temp.temp) : ""}°C</Text>
+            <Text style={styles.suhu}>{suhu ? Math.round(suhu) : ""}°C</Text>
             <View style={{ flexDirection: 'row', width: 300, 'alignItems': 'center', justifyContent: 'space-between' }}>
                 <Text style={styles.text}>Status :</Text>
-                <Switch
-                    style={styles.switch}
-                    trackColor={{ false: "#767577", true: "#81b0ff" }}
-                    thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-                    ios_backgroundColor="#3e3e3e"
-                    onValueChange={toggleSwitch}
-                    value={isEnabled}
-                />
+                {isEnabled ?
+                    <Switch
+                        style={styles.switch}
+                        onChange={() => {
+                            bcon = isEnabled
+                        }}
+                        trackColor={{ false: "#767577", true: "#81b0ff" }}
+                        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={toggleDark}
+                        value={isEnabled}
+                    />
+                    :
+                    <Switch
+                        style={styles.switch}
+                        onChange={() => {
+                            bcon = isEnabled
+                        }}
+                        trackColor={{ false: "#767577", true: "#81b0ff" }}
+                        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={toggleBright}
+                        value={isEnabled}
+                    />
+                }
             </View>
             <View style={styles.details}>
                 <View style={{ flexDirection: 'row' }}>
                     <Image source={require('../assets/humidity.png')} />
-                    <Text style={styles.textdetail}>{hum ? hum.humidity : ""}%</Text>
+                    <Text style={styles.textdetail}>{lembab ? lembab : ""}%</Text>
                 </View>
                 <View style={{ flexDirection: 'row' }}>
                     <Image source={require('../assets/wind.png')} />
