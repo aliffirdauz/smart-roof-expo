@@ -1,15 +1,45 @@
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import firebase from 'firebase/compat';
+import Paho from 'paho-mqtt';
+
+const clientHum = new Paho.Client('broker.hivemq.com', 8000, 'clientId-hum');
 
 const Condition = ({ wind }) => {
     const [lembab, setLembab] = useState(0);
+    // useEffect(() => {
+    //     (async () => {
+    //         firebase.database().ref('sensor/hum/').on('value', function (snapshot) {
+    //             setLembab(snapshot.val())
+    //         });
+    //     })();
+    // }, []);
+
     useEffect(() => {
         (async () => {
-            firebase.database().ref('sensor/hum/').on('value', function (snapshot) {
-                console.log(snapshot.val())
-                setLembab(snapshot.val())
-            });
+            // HUM
+            clientHum.onConnectionLost = (responseObject) => {
+                if (responseObject.errorCode !== 0) {
+                    console.log('Koneksi Hum ke broker MQTT terputus');
+                }
+            };
+
+            clientHum.onMessageArrived = (message) => {
+                console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
+                setLembab(message.payloadString);
+            };
+
+            if (!clientHum.isConnected()) {
+                clientHum.connect({
+                    onSuccess: () => {
+                        console.log('Hum berhasil terhubung ke broker MQTT');
+                        clientHum.subscribe('iot-dzaki-humi');
+
+                    }
+                });
+            } else {
+                console.log('Hum sudah terhubung ke broker MQTT');
+            }
         })();
     }, []);
 
@@ -53,7 +83,7 @@ const styles = StyleSheet.create({
     details: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        width: 300,
+        width: Dimensions.get('window').width - 120,
         marginTop: 20,
         backgroundColor: 'rgba(0, 13, 38, 0.3)',
         borderRadius: 20,

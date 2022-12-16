@@ -11,19 +11,68 @@ export default function RegistrationScreen() {
     const navigation = useNavigation()
 
     const handleSignUp = () => {
-        if (password !== confirmPassword) {
-            alert("Passwords don't match.")
-            return
+        // if (password !== confirmPassword) {
+        //     alert("Passwords don't match.")
+        //     return
+        // }
+        // auth
+        //     .createUserWithEmailAndPassword(email, password)
+        //     .then(userCredentials => {
+        //         const user = userCredentials.user;
+        //         console.log('Registered with:', user.email);
+        //         alert('Registered!', `Registered with: ${user.email}`);
+        //         navigation.navigate('Login');
+        //     })
+        //     .catch(error => alert(error.message))
+
+        var checkEmail = RegExp(/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i);
+
+        if ((email.length == 0) || (password.length == 0) || (confirmPassword.length == 0)) {
+            alert("Required Field Is Missing!!!");
+        } else if (!(checkEmail).test(email)) {
+            alert("invalid email!!!");
         }
-        auth
-            .createUserWithEmailAndPassword(email, password)
-            .then(userCredentials => {
-                const user = userCredentials.user;
-                console.log('Registered with:', user.email);
-                alert('Registered!', `Registered with: ${user.email}`);
-                navigation.navigate('Login');
+        // Password validations
+        else if (password.length < 8) {
+            alert("Minimum 08 characters required!!!");
+        } else if (!((/[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/).test(password))) {
+            alert("Use atleast 01 special character!!!");
+        } else if (((/[ ]/).test(password))) {
+            alert("Don't include space in password!!!");
+        } else if (password !== confirmPassword) {
+            alert("Password doesnot match!!!");
+        }
+
+
+        else {
+            var InsertAPIURL = "https://6b87-2404-c0-2e10-00-1201-8546.ngrok.io/reactnative-api/signup.php";   //API to render signup
+
+            var headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+
+            var Data = {
+                email: email,
+                password: password
+            };
+
+            // FETCH func ------------------------------------
+            fetch(InsertAPIURL, {
+                method: 'POST',
+                headers: headers,
+                mode: 'no-cors',
+                body: JSON.stringify(Data) //convert data to JSON
             })
-            .catch(error => alert(error.message))
+                .then((response) => response.json()) //check response type of API (CHECK OUTPUT OF DATA IS IN JSON)
+                .then((response) => {
+                    alert(response[0].Message);       // If data is in JSON => Display alert msg
+                    navigation.navigate('Login'); //Navigate to next screen if authentications are valid
+                })
+                .catch((error) => {
+                    alert("Error Occured" + error);
+                })
+        }
     }
 
     const handleLogin = () => {

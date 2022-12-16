@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native'
 import React, { useState } from 'react'
 
 const Forecast = ({ date, time, hour9, hour12, hour15, hour18 }) => {
@@ -8,7 +8,7 @@ const Forecast = ({ date, time, hour9, hour12, hour15, hour18 }) => {
         const img15 = { uri: 'http://openweathermap.org/img/wn/' + hour15.weather[0].icon + '@2x.png' }
         const img18 = { uri: 'http://openweathermap.org/img/wn/' + hour18.weather[0].icon + '@2x.png' }
         return (
-            <View style={{ marginTop: 20, backgroundColor: 'rgba(0, 13, 38, 0.3)', borderRadius: 20, padding: 10, width: 300, }}>
+            <View style={{ marginTop: 20, backgroundColor: 'rgba(0, 13, 38, 0.3)', borderRadius: 20, padding: 10, width: Dimensions.get('window').width - 120 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 }}>
                     <Text style={styles.textdetail}>{date}</Text>
                     <Text style={styles.textdetail}>{time}</Text>

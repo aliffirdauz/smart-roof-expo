@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/core'
 import { auth } from '../firebase';
 
 const LoginScreen = () => {
+    const [name, setName] = useState('')
+    const [address, setAddress] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
@@ -14,14 +16,51 @@ const LoginScreen = () => {
     }
 
     const handleLogin = () => {
-        auth
-            .signInWithEmailAndPassword(email, password)
-            .then(userCredentials => {
-                const user = userCredentials.user;
-                console.warn('Logged in with:', user.email);
-                navigation.navigate('Bright');
+        // auth
+        //     .signInWithEmailAndPassword(email, password)
+        //     .then(userCredentials => {
+        //         const user = userCredentials.user;
+        //         console.warn('Logged in with:', user.email);
+        //         navigation.navigate('Bright');
+        //     })
+        //     .catch(error => alert(error.message))
+
+        if ((email.length == 0) || (password.length == 0)) {
+            alert("Required Field Is Missing!!!");
+        } else {
+            var APIURL = "https://1e90-125-164-18-142.ngrok.io/reactnative-api/login.php";
+
+            var headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+
+            var Data = {
+                // name: name,
+                // address: address,
+                email: email,
+                password: password
+            };
+
+            fetch(APIURL, {
+                method: 'POST',
+                headers: headers,
+                mode: 'no-cors',
+                body: JSON.stringify(Data)
             })
-            .catch(error => alert(error.message))
+                .then((Response) => Response.json())
+                .then((Response) => {
+                    alert(Response[0].Message)
+                    if (Response[0].Message == "Success") {
+                        console.log("true")
+                        navigation.navigate('Bright');
+                    }
+                    console.log(Data);
+                })
+                .catch((error) => {
+                    console.error("ERROR FOUND" + error);
+                })
+        }
     }
 
     return (
