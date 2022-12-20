@@ -79,7 +79,7 @@ export default function BrightScreen() {
 
     useEffect(() => {
         (async () => {
-            fetch(`https://dbc5-103-104-130-10.ngrok.io/smartroof-api/data/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
+            fetch(`https://4043-103-104-130-10.ngrok.io/smartroof-api/data/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
                 if (data.length == 0) {
                     console.log('No data');
                 } else {
@@ -143,6 +143,8 @@ export default function BrightScreen() {
             });
         } else {
             console.log('Button sudah terhubung ke broker MQTT');
+            message.destinationName = 'iot-dzaki-button';
+            clientBtn.send(message);
         }
     };
 
@@ -170,6 +172,8 @@ export default function BrightScreen() {
             });
         } else {
             console.log('Button sudah terhubung ke broker MQTT');
+            message.destinationName = 'iot-dzaki-button';
+            clientBtn.send(message);
         }
     };
 
@@ -205,8 +209,13 @@ export default function BrightScreen() {
                 });
             } else {
                 console.log('Temp sudah terhubung ke broker MQTT');
+                clientTemp.subscribe('iot-dzaki-temp');
             }
+        })();
+    }, []);
 
+    useEffect(() => {
+        (async () => {
             // RDS
             clientRds.onConnectionLost = (responseObject) => {
                 if (responseObject.errorCode !== 0) {
@@ -229,11 +238,12 @@ export default function BrightScreen() {
                 });
             } else {
                 console.log('RDS sudah terhubung ke broker MQTT');
+                clientRds.subscribe('iot-dzaki-rds');
             }
         })();
     }, []);
 
-    const MyBarChart = ({temp9, temp12, temp15, temp18}) => {
+    const MyBarChart = ({ temp9, temp12, temp15, temp18 }) => {
         var t9 = temp9 ? temp9.temp : 0
         var t12 = temp12 ? temp12.temp : 0
         var t15 = temp15 ? temp15.temp : 0
@@ -352,7 +362,7 @@ export default function BrightScreen() {
                         </View>
                         <Condition wind={data.wind} />
                         <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
-                        <MyBarChart />
+                        <MyBarChart temp9={dataReal[0]} temp12={dataReal[1]} temp15={dataReal[2]} temp18={dataReal[3]} />
                         <MyPieChart />
                     </View>
                 </ScrollView>

@@ -39,6 +39,7 @@ const Condition = ({ wind }) => {
                 });
             } else {
                 console.log('Hum sudah terhubung ke broker MQTT');
+                clientHum.subscribe('iot-dzaki-humi');
             }
         })();
     }, []);
