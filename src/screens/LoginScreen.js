@@ -1,177 +1,96 @@
-import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/core'
-import { auth } from '../firebase';
+import React, { useState } from 'react';
+import { View, StyleSheet, TextInput, Text, Button, Alert, TouchableOpacity } from 'react-native';
 
-const LoginScreen = () => {
-    const [name, setName] = useState('')
-    const [address, setAddress] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+async function login(email, password) {
+  try {
+    let response = await fetch('https://smartroof-api.000webhostapp.com/login.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+    });
 
-    const navigation = useNavigation()
-
-    const handleSignUp = () => {
-        navigation.navigate('Registration');
-    }
-
-    const handleLogin = () => {
-        // auth
-        //     .signInWithEmailAndPassword(email, password)
-        //     .then(userCredentials => {
-        //         const user = userCredentials.user;
-        //         console.warn('Logged in with:', user.email);
-        //         navigation.navigate('Bright');
-        //     })
-        //     .catch(error => alert(error.message))
-
-        if ((email.length == 0) || (password.length == 0)) {
-            alert("Required Field Is Missing!!!");
-        } else {
-            var APIURL = "https://1e90-125-164-18-142.ngrok.io/reactnative-api/login.php";
-
-            var headers = {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            };
-
-            var Data = {
-                // name: name,
-                // address: address,
-                email: email,
-                password: password
-            };
-
-            fetch(APIURL, {
-                method: 'POST',
-                headers: headers,
-                mode: 'no-cors',
-                body: JSON.stringify(Data)
-            })
-                .then((Response) => Response.json())
-                .then((Response) => {
-                    alert(Response[0].Message)
-                    if (Response[0].Message == "Success") {
-                        console.log("true")
-                        navigation.navigate('Bright');
-                    }
-                    console.log(Data);
-                })
-                .catch((error) => {
-                    console.error("ERROR FOUND" + error);
-                })
-        }
-    }
-
-    return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior="height"
-        >
-            <View style={styles.inputContainer}>
-                <Text style={styles.title}>Smart Roof</Text>
-                <TextInput
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={text => setEmail(text)}
-                    style={styles.input}
-                />
-                <TextInput
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={text => setPassword(text)}
-                    style={styles.input}
-                    secureTextEntry
-                />
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    onPress={handleLogin}
-                    style={styles.button}
-                >
-                    <Text style={styles.buttonText}>Login</Text>
-                </TouchableOpacity>
-                <Text style={styles.footerText}>Don't have an account? <Text onPress={handleSignUp} style={styles.footerLink}>Sign up</Text></Text>
-            </View>
-        </KeyboardAvoidingView>
-    )
+    let responseJson = await response.json();
+    console.log(responseJson);
+    return responseJson;
+  } catch (error) {
+    Alert.alert('Error', 'An error occurred while trying to log in');
+  }
 }
 
-export default LoginScreen
+export default function LoginScreen({ navigation }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = () => {
+    (async () => {
+      let response = await login(email, password);
+      console.log(response);
+    }
+    )();
+    navigation.navigate('Bright');
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text
+        style={styles.title}
+      >
+        Smart Roof
+      </Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={true}
+        />
+        <Button title="Log In" onPress={() => handleSubmit()} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Registration')}
+          style={styles.button}
+        >
+          <Text
+            style={{ color: 'blue' }}
+          >
+            Don't have an account? Register here.
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    inputContainer: {
-        width: '80%'
-    },
-    input: {
-        backgroundColor: 'white',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 10,
-        marginTop: 5,
-        borderColor: 'lightgray',
-        borderWidth: 1
-
-    },
-    buttonContainer: {
-        width: '59%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 40,
-        flexDirection: 'column',
-    },
-    button: {
-        backgroundColor: '#0782F9',
-        width: '100%',
-        padding: 15,
-        borderRadius: 10,
-        marginRight: 10,
-        marginLeft: 10,
-        alignItems: 'center',
-    },
-    buttonOutline: {
-        backgroundColor: 'white',
-        marginTop: 5,
-        borderColor: '#0782F9',
-        borderWidth: 2,
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: '700',
-        fontSize: 16,
-    },
-    buttonOutlineText: {
-        color: '#0782F9',
-        fontWeight: '700',
-        fontSize: 16,
-    },
-    title: {
-        fontSize: 48,
-        marginBottom: 20,
-        textAlign: 'center',
-        fontWeight: 'bold',
-        color: '#000000',
-    },
-    text: {
-        fontSize: 16,
-        marginTop: 20,
-        textAlign: 'center',
-        color: '#000000',
-    },
-    footerText: {
-        marginTop: 20,
-        fontSize: 16,
-        color: '#000000',
-    },
-    footerLink: {
-        color: "#788eec",
-        fontWeight: "bold",
-        fontSize: 16
-    }
-})
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputContainer: {
+    width: 300,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  input: {
+    height: 40,
+    borderBottomColor: 'gray',
+    borderBottomWidth: 1,
+    marginBottom: 20,
+  },
+  button: {
+    marginTop: 20,
+  },
+});

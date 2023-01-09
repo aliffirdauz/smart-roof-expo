@@ -7,13 +7,6 @@ const clientHum = new Paho.Client('broker.hivemq.com', 8000, 'clientId-hum');
 
 const Condition = ({ wind }) => {
     const [lembab, setLembab] = useState(0);
-    // useEffect(() => {
-    //     (async () => {
-    //         firebase.database().ref('sensor/hum/').on('value', function (snapshot) {
-    //             setLembab(snapshot.val())
-    //         });
-    //     })();
-    // }, []);
 
     useEffect(() => {
         (async () => {

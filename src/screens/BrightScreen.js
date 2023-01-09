@@ -1,16 +1,13 @@
-import { Dimensions, Image, ScrollView, Switch, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Dimensions, Image, ScrollView, Switch, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import firebase from 'firebase/compat';
 import { auth } from '../firebase';
 import { Header } from '@rneui/base'
 import { useNavigation } from '@react-navigation/native';
 import Condition from '../components/Condition';
 import Forecast from '../components/Forecast';
 import Paho from 'paho-mqtt';
-import {
-    BarChart,
-    PieChart
-} from "react-native-chart-kit";
+import { BarChart } from "react-native-chart-kit";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -29,17 +26,27 @@ function Mapicon() {
     );
 }
 
+async function signOut() {
+    try {
+        await AsyncStorage.removeItem('userToken');
+    } catch (error) {
+        console.log('Error signing out: ', error);
+    }
+}
+
 function Unionicon() {
     const navigation = useNavigation();
 
     const handleSignOut = () => {
-        auth
-            .signOut()
-            .then(() => {
-                console.warn('User signed out!');
-                navigation.replace('Login');
-            })
-            .catch(error => alert(error.message))
+        // auth
+        //     .signOut()
+        //     .then(() => {
+        //         console.warn('User signed out!');
+        //         navigation.replace('Login');
+        //     })
+        //     .catch(error => alert(error.message))
+        signOut();
+        navigation.replace('Login');
     }
 
     return (
@@ -59,27 +66,17 @@ export default function BrightScreen() {
     const [forecast, setForecast] = useState({});
     const [isEnabled, setIsEnabled] = useState();
     const [suhu, setSuhu] = useState(0);
-    const [isHujan, setIsHujan] = useState();
+    // const [isHujan, setIsHujan] = useState();
 
     useEffect(() => {
         (async () => {
             fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`).then(res => res.json()).then(data => {
                 setData(data);
             });
-        })();
-    }, []);
-
-    useEffect(() => {
-        (async () => {
             fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric`).then(res => res.json()).then(data => {
                 setForecast(data.list);
             });
-        })();
-    }, []);
-
-    useEffect(() => {
-        (async () => {
-            fetch(`https://4043-103-104-130-10.ngrok.io/smartroof-api/data/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
+            fetch(`https://smartroof-api.000webhostapp.com/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
                 if (data.length == 0) {
                     console.log('No data');
                 } else {
@@ -87,20 +84,6 @@ export default function BrightScreen() {
                 }
             });
         })();
-    }, []);
-
-    // useEffect(() => {
-    //     (async () => {
-    //         firebase.database().ref('sensor/btn/').on('value', function (snapshot) {
-    //             setIsEnabled(snapshot.val())
-    //         });
-    //         firebase.database().ref('sensor/isHujan/').on('value', function (snapshot) {
-    //             setIsHujan(snapshot.val())
-    //         });
-    //     })();
-    // }, []);
-
-    useEffect(() => {
         setInterval(() => {
             const time = new Date();
             const month = time.getMonth();
@@ -116,142 +99,194 @@ export default function BrightScreen() {
             setDate(days[day] + ', ' + date + ' ' + months[month])
 
         }, 1000);
+        // TEMP
+        clientTemp.onConnectionLost = (responseObject) => {
+            if (responseObject.errorCode !== 0) {
+                console.log('Koneksi Temp ke broker MQTT terputus');
+            }
+        };
+
+        clientTemp.onMessageArrived = (message) => {
+            console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
+            setSuhu(message.payloadString);
+        };
+
+        if (!clientTemp.isConnected()) {
+            clientTemp.connect({
+                onSuccess: () => {
+                    console.log('Temp berhasil terhubung ke broker MQTT');
+                    clientTemp.subscribe('iot-dzaki-temp');
+
+                }
+            });
+        } else {
+            console.log('Temp sudah terhubung ke broker MQTT');
+            clientTemp.subscribe('iot-dzaki-temp');
+        }
+        // RDS
+        clientRds.onConnectionLost = (responseObject) => {
+            if (responseObject.errorCode !== 0) {
+                console.log('Koneksi RDS ke broker MQTT terputus');
+            }
+        };
+
+        clientRds.onMessageArrived = (message) => {
+            console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
+            if (message.payloadString === "1") {
+                // setIsHujan(true);
+                setIsEnabled(true);
+            } else {
+                setIsEnabled(false);
+                // setIsHujan(false);
+            }
+
+        };
+
+        if (!clientRds.isConnected()) {
+            clientRds.connect({
+                onSuccess: () => {
+                    console.log('RDS berhasil terhubung ke broker MQTT');
+                    clientRds.subscribe('iot-dzaki-rds');
+
+                }
+            });
+        } else {
+            console.log('RDS sudah terhubung ke broker MQTT');
+            clientRds.subscribe('iot-dzaki-rds');
+        }
+        // Btn
+        // clientBtn.onConnectionLost = (responseObject) => {
+        //     if (responseObject.errorCode !== 0) {
+        //         console.log('Koneksi Btn ke broker MQTT terputus');
+        //     }
+        // };
+
+        // clientBtn.onMessageArrived = (message) => {
+        //     console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
+        //     setIsEnabled(message.payloadString);
+        //     console.log('Button : ', isEnabled)
+        // };
+
+        // if (!clientBtn.isConnected()) {
+        //     clientBtn.connect({
+        //         onSuccess: () => {
+        //             console.log('Btn berhasil terhubung ke broker MQTT');
+        //             clientBtn.subscribe('iot-dzaki-button');
+
+        //         }
+        //     });
+        // } else {
+        //     console.log('Btn sudah terhubung ke broker MQTT');
+        //     clientBtn.subscribe('iot-dzaki-button');
+        // }
     }, []);
-
-    const toggleDark = (btn = isEnabled) => {
-        setIsEnabled(false)
-        // firebase.database().ref('sensor/').update({
-        //     btn,
-        // });
-
-        // Btn
-        const message = new Paho.Message('false');
-
-        clientBtn.onConnectionLost = (responseObject) => {
-            if (responseObject.errorCode !== 0) {
-                console.log('Koneksi Button ke broker MQTT terputus');
-            }
-        };
-
-        if (!clientBtn.isConnected()) {
-            clientBtn.connect({
-                onSuccess: () => {
-                    console.log('Button berhasil terhubung ke broker MQTT');
-                    message.destinationName = 'iot-dzaki-button';
-                    clientBtn.send(message);
-                }
-            });
-        } else {
-            console.log('Button sudah terhubung ke broker MQTT');
-            message.destinationName = 'iot-dzaki-button';
-            clientBtn.send(message);
-        }
-    };
-
-    const toggleBright = (btn = isEnabled) => {
-        setIsEnabled(true)
-        // firebase.database().ref('sensor/').update({
-        //     btn,
-        // });
-        // Btn
-        const message = new Paho.Message('true');
-
-        clientBtn.onConnectionLost = (responseObject) => {
-            if (responseObject.errorCode !== 0) {
-                console.log('Koneksi Button ke broker MQTT terputus');
-            }
-        };
-
-        if (!clientBtn.isConnected()) {
-            clientBtn.connect({
-                onSuccess: () => {
-                    console.log('Button berhasil terhubung ke broker MQTT');
-                    message.destinationName = 'iot-dzaki-button';
-                    clientBtn.send(message);
-                }
-            });
-        } else {
-            console.log('Button sudah terhubung ke broker MQTT');
-            message.destinationName = 'iot-dzaki-button';
-            clientBtn.send(message);
-        }
-    };
 
     // useEffect(() => {
     //     (async () => {
-    //         firebase.database().ref('sensor/dht/').on('value', function (snapshot) {
-    //             setSuhu(snapshot.val())
+    //         fetch(`https://275c-103-104-130-10.ngrok.io/smartroof-api/data/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
+    //             if (data.length == 0) {
+    //                 console.log('No data');
+    //             } else {
+    //                 setDataReal(data.data);
+    //             }
     //         });
     //     })();
     // }, []);
 
-    useEffect(() => {
-        (async () => {
-            // TEMP
-            clientTemp.onConnectionLost = (responseObject) => {
-                if (responseObject.errorCode !== 0) {
-                    console.log('Koneksi Temp ke broker MQTT terputus');
-                }
-            };
+    const toggleDark = () => {
+        Alert.alert(
+            'Warning',
+            'Are you sure to open the roof?',
+            [
+                {
+                    text: 'Cancel',
+                    onPress: () => console.log('Cancel Pressed'),
+                    style: 'cancel',
+                },
+                {
+                    text: 'OK', onPress: () => {
+                        setIsEnabled(false)
 
-            clientTemp.onMessageArrived = (message) => {
-                console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
-                setSuhu(message.payloadString);
-            };
+                        // Btn
+                        const message = new Paho.Message('false');
 
-            if (!clientTemp.isConnected()) {
-                clientTemp.connect({
-                    onSuccess: () => {
-                        console.log('Temp berhasil terhubung ke broker MQTT');
-                        clientTemp.subscribe('iot-dzaki-temp');
+                        clientBtn.onConnectionLost = (responseObject) => {
+                            if (responseObject.errorCode !== 0) {
+                                console.log('Koneksi Button ke broker MQTT terputus');
+                            }
+                        };
 
+                        if (!clientBtn.isConnected()) {
+                            clientBtn.connect({
+                                onSuccess: () => {
+                                    console.log('Button berhasil terhubung ke broker MQTT');
+                                    message.destinationName = 'iot-dzaki-button';
+                                    clientBtn.send(message);
+                                }
+                            });
+                        } else {
+                            console.log('Button sudah terhubung ke broker MQTT');
+                            message.destinationName = 'iot-dzaki-button';
+                            clientBtn.send(message);
+                        }
                     }
-                });
-            } else {
-                console.log('Temp sudah terhubung ke broker MQTT');
-                clientTemp.subscribe('iot-dzaki-temp');
-            }
-        })();
-    }, []);
+                },
+            ],
+            { cancelable: false }
+        )
+    };
 
-    useEffect(() => {
-        (async () => {
-            // RDS
-            clientRds.onConnectionLost = (responseObject) => {
-                if (responseObject.errorCode !== 0) {
-                    console.log('Koneksi RDS ke broker MQTT terputus');
-                }
-            };
+    const toggleBright = () => {
+        Alert.alert(
+            'Warning',
+            'Are you sure to close the roof?',
+            [
+                {
+                    text: 'Cancel',
+                    onPress: () => console.log('Cancel Pressed'),
+                    style: 'cancel',
+                },
+                {
+                    text: 'OK', onPress: () => {
+                        setIsEnabled(true)
 
-            clientRds.onMessageArrived = (message) => {
-                console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
-                setIsHujan(message.payloadString);
-            };
+                        // Btn
+                        const message = new Paho.Message('true');
 
-            if (!clientRds.isConnected()) {
-                clientRds.connect({
-                    onSuccess: () => {
-                        console.log('RDS berhasil terhubung ke broker MQTT');
-                        clientRds.subscribe('iot-dzaki-rds');
+                        clientBtn.onConnectionLost = (responseObject) => {
+                            if (responseObject.errorCode !== 0) {
+                                console.log('Koneksi Button ke broker MQTT terputus');
+                            }
+                        };
 
+                        if (!clientBtn.isConnected()) {
+                            clientBtn.connect({
+                                onSuccess: () => {
+                                    console.log('Button berhasil terhubung ke broker MQTT');
+                                    message.destinationName = 'iot-dzaki-button';
+                                    clientBtn.send(message);
+                                }
+                            });
+                        } else {
+                            console.log('Button sudah terhubung ke broker MQTT');
+                            message.destinationName = 'iot-dzaki-button';
+                            clientBtn.send(message);
+                        }
                     }
-                });
-            } else {
-                console.log('RDS sudah terhubung ke broker MQTT');
-                clientRds.subscribe('iot-dzaki-rds');
-            }
-        })();
-    }, []);
+                },
+            ]
+        )
+    };
 
-    const MyBarChart = ({ temp9, temp12, temp15, temp18 }) => {
+    const TempChart = ({ temp9, temp12, temp15, temp18 }) => {
         var t9 = temp9 ? temp9.temp : 0
         var t12 = temp12 ? temp12.temp : 0
         var t15 = temp15 ? temp15.temp : 0
         var t18 = temp18 ? temp18.temp : 0
-        console.log(t9)
-        console.log(t12)
-        console.log(t15)
-        console.log(t18)
+        console.log('t9 : ', t9)
+        console.log('t12 : ', t12)
+        console.log('t15 : ', t15)
+        console.log('t18 : ', t18)
         return (
             <>
                 <Text style={styles.text}>Temperature Data</Text>
@@ -286,27 +321,27 @@ export default function BrightScreen() {
         );
     };
 
-    const MyPieChart = () => {
+    const HumChart = ({ hum9, hum12, hum15, hum18 }) => {
+        var h9 = hum9 ? hum9.hum : 0
+        var h12 = hum12 ? hum12.hum : 0
+        var h15 = hum15 ? hum15.hum : 0
+        var h18 = hum18 ? hum18.hum : 0
+        console.log('h9 : ', h9)
+        console.log('h12 : ', h12)
+        console.log('h15 : ', h15)
+        console.log('h18 : ', h18)
         return (
             <>
-                <Text style={styles.text}>Rain Count</Text>
-                <PieChart
-                    data={[
-                        {
-                            name: 'Rainy Day',
-                            population: 6,
-                            color: '#472183',
-                            legendFontColor: '#fff',
-                            legendFontSize: 15,
-                        },
-                        {
-                            name: 'Sunny Day',
-                            population: 3,
-                            color: '#4B56D2',
-                            legendFontColor: '#fff',
-                            legendFontSize: 15,
-                        },
-                    ]}
+                <Text style={styles.text}>Humidity Data</Text>
+                <BarChart
+                    data={{
+                        labels: ['09:00', '12:00', '15:00', '18:00'],
+                        datasets: [
+                            {
+                                data: [h9, h12, h15, h18],
+                            },
+                        ],
+                    }}
                     width={Dimensions.get('window').width - 120}
                     height={220}
                     chartConfig={{
@@ -322,84 +357,44 @@ export default function BrightScreen() {
                     style={{
                         marginVertical: 8,
                         borderRadius: 16,
+                        padding: 10
                     }}
-                    accessor="population"
-                    backgroundColor="transparent"
-                    paddingLeft="15"
-                    absolute //for the absolute number remove if you want percentage
                 />
             </>
         );
     };
-
     return (
-        <>
-            {isEnabled ? (
-                <ScrollView>
-                    <View style={[styles.container, { backgroundColor: '#0C43AC' }]}>
-                        <Header
-                            placement="left"
-                            backgroundColor='#0C43AC'
-                            leftComponent={<Mapicon />}
-                            centerComponent={{ text: 'Bandung', style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
-                            rightComponent={<Unionicon />}
-                            containerStyle={{ marginHorizontal: 20 }}
-                        />
-                        <View style={styles.icon}>
-                            <Image style={styles.logo} source={require('../assets/Rain.png')} />
-                        </View>
-                        <Text style={styles.suhu}>{suhu ? suhu : ""}°C</Text>
-                        <View style={{ flexDirection: 'row', width: 300, 'alignItems': 'center', justifyContent: 'space-between' }}>
-                            <Text style={styles.text}>Status :</Text>
-                            <Switch
-                                style={styles.switch}
-                                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                                thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-                                ios_backgroundColor="#3e3e3e"
-                                onValueChange={toggleDark}
-                                value={isEnabled}
-                            />
-                        </View>
-                        <Condition wind={data.wind} />
-                        <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
-                        <MyBarChart temp9={dataReal[0]} temp12={dataReal[1]} temp15={dataReal[2]} temp18={dataReal[3]} />
-                        <MyPieChart />
-                    </View>
-                </ScrollView>
-            ) : (
-                <ScrollView>
-                    <View style={[styles.container, { backgroundColor: '#29B2DD' }]}>
-                        <Header
-                            placement="left"
-                            backgroundColor='#29B2DD'
-                            leftComponent={<Mapicon />}
-                            centerComponent={{ text: 'Bandung', style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
-                            rightComponent={<Unionicon />}
-                            containerStyle={{ marginHorizontal: 20 }}
-                        />
-                        <View style={styles.icon}>
-                            <Image style={styles.logo} source={require('../assets/Sun.png')} />
-                        </View>
-                        <Text style={styles.suhu}>{suhu ? suhu : ""}°C</Text>
-                        <View style={{ flexDirection: 'row', width: 300, 'alignItems': 'center', justifyContent: 'space-between' }}>
-                            <Text style={styles.text}>Status :</Text>
-                            <Switch
-                                style={styles.switch}
-                                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                                thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
-                                ios_backgroundColor="#3e3e3e"
-                                onValueChange={toggleBright}
-                                value={isEnabled}
-                            />
-                        </View>
-                        <Condition wind={data.wind} />
-                        <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
-                        <MyBarChart temp9={dataReal[0]} temp12={dataReal[1]} temp15={dataReal[2]} temp18={dataReal[3]} />
-                        <MyPieChart />
-                    </View>
-                </ScrollView>
-            )}
-        </>
+        <ScrollView>
+            <View style={[styles.container, { backgroundColor: isEnabled ? '#0C43AC' : '#29B2DD' }]}>
+                <Header
+                    placement="left"
+                    backgroundColor={isEnabled ? '#0C43AC' : '#29B2DD'}
+                    leftComponent={<Mapicon />}
+                    centerComponent={{ text: 'Bandung', style: { color: '#fff', fontSize: 24, fontWeight: 'bold' } }}
+                    rightComponent={<Unionicon />}
+                    containerStyle={{ marginHorizontal: 20 }}
+                />
+                <View style={styles.icon}>
+                    <Image style={styles.logo} source={isEnabled ? require('../assets/Rain.png') : require('../assets/Sun.png')} />
+                </View>
+                <Text style={styles.suhu}>{suhu ? suhu : ""}°C</Text>
+                <View style={{ flexDirection: 'row', width: 300, 'alignItems': 'center', justifyContent: 'space-between' }}>
+                    <Text style={styles.text}>Status :</Text>
+                    <Switch
+                        style={styles.switch}
+                        trackColor={isEnabled ? { false: "#767577", true: "#81b0ff" } : { false: "#767577", true: "#f5dd4b" }}
+                        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={isEnabled ? toggleDark : toggleBright}
+                        value={isEnabled}
+                    />
+                </View>
+                <Condition wind={data.wind} />
+                <Forecast date={date} time={time} hour9={forecast[0]} hour12={forecast[1]} hour15={forecast[2]} hour18={forecast[3]} />
+                <TempChart temp9={dataReal[3]} temp12={dataReal[2]} temp15={dataReal[1]} temp18={dataReal[0]} />
+                <HumChart hum9={dataReal[3]} hum12={dataReal[2]} hum15={dataReal[1]} hum18={dataReal[0]} />
+            </View>
+        </ScrollView>
     )
 }
 
