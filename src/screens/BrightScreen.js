@@ -8,6 +8,7 @@ import Forecast from '../components/Forecast';
 import Paho from 'paho-mqtt';
 import { BarChart } from "react-native-chart-kit";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import firebase from 'firebase/compat';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -18,7 +19,6 @@ const city = 'Bandung';
 
 const clientTemp = new Paho.Client('broker.hivemq.com', 8000, 'clientId-temp');
 const clientRds = new Paho.Client('broker.hivemq.com', 8000, 'clientId-rds');
-const clientBtn = new Paho.Client('broker.hivemq.com', 8000, 'clientId-btn');
 
 function Mapicon() {
     return (
@@ -38,13 +38,6 @@ function Unionicon() {
     const navigation = useNavigation();
 
     const handleSignOut = () => {
-        // auth
-        //     .signOut()
-        //     .then(() => {
-        //         console.warn('User signed out!');
-        //         navigation.replace('Login');
-        //     })
-        //     .catch(error => alert(error.message))
         signOut();
         navigation.replace('Login');
     }
@@ -66,7 +59,6 @@ export default function BrightScreen() {
     const [forecast, setForecast] = useState({});
     const [isEnabled, setIsEnabled] = useState();
     const [suhu, setSuhu] = useState(0);
-    // const [isHujan, setIsHujan] = useState();
 
     useEffect(() => {
         (async () => {
@@ -82,6 +74,10 @@ export default function BrightScreen() {
                 } else {
                     setDataReal(data.data);
                 }
+            });
+            firebase.database().ref('sensor/btn/').on('value', function (snapshot) {
+                console.log(snapshot.val())
+                setIsEnabled(snapshot.val())
             });
         })();
         setInterval(() => {
@@ -130,18 +126,6 @@ export default function BrightScreen() {
             }
         };
 
-        clientRds.onMessageArrived = (message) => {
-            console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
-            if (message.payloadString === "1") {
-                // setIsHujan(true);
-                setIsEnabled(true);
-            } else {
-                setIsEnabled(false);
-                // setIsHujan(false);
-            }
-
-        };
-
         if (!clientRds.isConnected()) {
             clientRds.connect({
                 onSuccess: () => {
@@ -154,46 +138,9 @@ export default function BrightScreen() {
             console.log('RDS sudah terhubung ke broker MQTT');
             clientRds.subscribe('iot-dzaki-rds');
         }
-        // Btn
-        // clientBtn.onConnectionLost = (responseObject) => {
-        //     if (responseObject.errorCode !== 0) {
-        //         console.log('Koneksi Btn ke broker MQTT terputus');
-        //     }
-        // };
-
-        // clientBtn.onMessageArrived = (message) => {
-        //     console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
-        //     setIsEnabled(message.payloadString);
-        //     console.log('Button : ', isEnabled)
-        // };
-
-        // if (!clientBtn.isConnected()) {
-        //     clientBtn.connect({
-        //         onSuccess: () => {
-        //             console.log('Btn berhasil terhubung ke broker MQTT');
-        //             clientBtn.subscribe('iot-dzaki-button');
-
-        //         }
-        //     });
-        // } else {
-        //     console.log('Btn sudah terhubung ke broker MQTT');
-        //     clientBtn.subscribe('iot-dzaki-button');
-        // }
     }, []);
 
-    // useEffect(() => {
-    //     (async () => {
-    //         fetch(`https://275c-103-104-130-10.ngrok.io/smartroof-api/data/show.php`, { method: 'GET', mode: 'no-cors' }).then(res => res.json()).then(data => {
-    //             if (data.length == 0) {
-    //                 console.log('No data');
-    //             } else {
-    //                 setDataReal(data.data);
-    //             }
-    //         });
-    //     })();
-    // }, []);
-
-    const toggleDark = () => {
+    const toggleDark = (isEnabled) => {
         Alert.alert(
             'Warning',
             'Are you sure to open the roof?',
@@ -205,30 +152,10 @@ export default function BrightScreen() {
                 },
                 {
                     text: 'OK', onPress: () => {
-                        setIsEnabled(false)
-
-                        // Btn
-                        const message = new Paho.Message('false');
-
-                        clientBtn.onConnectionLost = (responseObject) => {
-                            if (responseObject.errorCode !== 0) {
-                                console.log('Koneksi Button ke broker MQTT terputus');
-                            }
-                        };
-
-                        if (!clientBtn.isConnected()) {
-                            clientBtn.connect({
-                                onSuccess: () => {
-                                    console.log('Button berhasil terhubung ke broker MQTT');
-                                    message.destinationName = 'iot-dzaki-button';
-                                    clientBtn.send(message);
-                                }
-                            });
-                        } else {
-                            console.log('Button sudah terhubung ke broker MQTT');
-                            message.destinationName = 'iot-dzaki-button';
-                            clientBtn.send(message);
-                        }
+                        setIsEnabled(false);
+                        firebase.database().ref('sensor/').update({
+                            btn: isEnabled
+                        });
                     }
                 },
             ],
@@ -236,7 +163,7 @@ export default function BrightScreen() {
         )
     };
 
-    const toggleBright = () => {
+    const toggleBright = (isEnabled) => {
         Alert.alert(
             'Warning',
             'Are you sure to close the roof?',
@@ -249,29 +176,9 @@ export default function BrightScreen() {
                 {
                     text: 'OK', onPress: () => {
                         setIsEnabled(true)
-
-                        // Btn
-                        const message = new Paho.Message('true');
-
-                        clientBtn.onConnectionLost = (responseObject) => {
-                            if (responseObject.errorCode !== 0) {
-                                console.log('Koneksi Button ke broker MQTT terputus');
-                            }
-                        };
-
-                        if (!clientBtn.isConnected()) {
-                            clientBtn.connect({
-                                onSuccess: () => {
-                                    console.log('Button berhasil terhubung ke broker MQTT');
-                                    message.destinationName = 'iot-dzaki-button';
-                                    clientBtn.send(message);
-                                }
-                            });
-                        } else {
-                            console.log('Button sudah terhubung ke broker MQTT');
-                            message.destinationName = 'iot-dzaki-button';
-                            clientBtn.send(message);
-                        }
+                        firebase.database().ref('sensor/').update({
+                            btn: isEnabled
+                        });
                     }
                 },
             ]
