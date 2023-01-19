@@ -59,6 +59,7 @@ export default function BrightScreen() {
     const [forecast, setForecast] = useState({});
     const [isEnabled, setIsEnabled] = useState();
     const [suhu, setSuhu] = useState(0);
+    const [hujan, setHujan] = useState(0);
 
     useEffect(() => {
         (async () => {
@@ -126,6 +127,11 @@ export default function BrightScreen() {
             }
         };
 
+        clientRds.onMessageArrived = (message) => {
+            console.log(`Pesan diterima dari topic ${message.destinationName}: ${message.payloadString}`);
+            setHujan(message.payloadString);
+        };
+
         if (!clientRds.isConnected()) {
             clientRds.connect({
                 onSuccess: () => {
@@ -138,29 +144,56 @@ export default function BrightScreen() {
             console.log('RDS sudah terhubung ke broker MQTT');
             clientRds.subscribe('iot-dzaki-rds');
         }
+
+        // if (hujan == 0 && isEnabled == true) {
+        //     Alert.alert(
+        //         'Warning',
+        //         'The rain has stopped, you can open the roof!',
+        //         [
+        //             {
+        //                 text: 'OK'
+        //             },
+        //         ],
+        //         { cancelable: false }
+
+        //     )
+        // }
     }, []);
 
     const toggleDark = (isEnabled) => {
-        Alert.alert(
-            'Warning',
-            'Are you sure to open the roof?',
-            [
-                {
-                    text: 'Cancel',
-                    onPress: () => console.log('Cancel Pressed'),
-                    style: 'cancel',
-                },
-                {
-                    text: 'OK', onPress: () => {
-                        setIsEnabled(false);
-                        firebase.database().ref('sensor/').update({
-                            btn: isEnabled
-                        });
-                    }
-                },
-            ],
-            { cancelable: false }
-        )
+        if (hujan == 1) {
+            Alert.alert(
+                'Warning',
+                'Please wait until the rain stops!',
+                [
+                    {
+                        text: 'OK'
+                    },
+                ],
+                { cancelable: false }
+            )
+        } else {
+            Alert.alert(
+                'Warning',
+                'Are you sure to open the roof?',
+                [
+                    {
+                        text: 'Cancel',
+                        onPress: () => console.log('Cancel Pressed'),
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'OK', onPress: () => {
+                            setIsEnabled(false);
+                            firebase.database().ref('sensor/').update({
+                                btn: isEnabled
+                            });
+                        }
+                    },
+                ],
+                { cancelable: false }
+            )
+        }
     };
 
     const toggleBright = (isEnabled) => {
